@@ -1,0 +1,33 @@
+name: Test Purplemet Action Locally
+
+on: push
+
+jobs:
+  test-analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Purplemet Analysis
+        uses: ./integrations/github-action
+        id: analyze
+        with:
+          api-token: ${{ secrets.PURPLEMET_API_TOKEN }}
+          target-url: ${{ secrets.PURPLEMET_TARGET_URL }}
+          fail-severity: 'high'
+          timeout: '120000'
+          version: 'local'
+          base-url: ${{ secrets.PURPLEMET_BASE_URL }}
+        continue-on-error: true
+
+      - name: Show outputs
+        run: |
+          echo "=== Analysis Results ==="
+          echo "Exit code: ${{ steps.analyze.outputs.exit-code }}"
+          echo "Rating:    ${{ steps.analyze.outputs.rating }}"
+          echo "Issues:    ${{ steps.analyze.outputs.issues }}"
+          echo ""
+          if [ -f purplemet-report.json ]; then
+            echo "=== Report ==="
+            cat purplemet-report.json | jq .
+          fi

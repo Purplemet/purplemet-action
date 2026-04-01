@@ -1,0 +1,324 @@
+name: 'Purplemet Web ASM'
+description: 'Run a Purplemet web attack surface analysis on your web application and get actionable results in your CI pipeline.'
+author: 'Purplemet'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  api-token:
+    description: 'Purplemet API token'
+    required: true
+  target-url:
+    description: 'URL of the web application to analyze'
+    required: true
+  fail-severity:
+    description: 'Fail if issues at or above this severity are found (critical, high, medium, low, info)'
+    required: false
+    default: 'high'
+  timeout:
+    description: 'Global wait timeout in milliseconds (0 = unlimited)'
+    required: false
+    default: '300000'
+  version:
+    description: 'Purplemet CLI version to use (e.g. v1.0.0, latest)'
+    required: false
+    default: 'latest'
+  base-url:
+    description: 'Purplemet API base URL (override)'
+    required: false
+    default: ''
+  fail-rating:
+    description: 'Fail if rating is at or below this grade (A-F)'
+    required: false
+    default: ''
+  fail-cvss:
+    description: 'Fail if any CVE has CVSS score >= this value (e.g. 9.0)'
+    required: false
+    default: '0'
+  fail-on-eol:
+    description: 'Fail if end-of-life components are detected'
+    required: false
+    default: 'false'
+  fail-on-ssl:
+    description: 'Fail if SSL/TLS protocol issues are detected'
+    required: false
+    default: 'false'
+  fail-on-cert:
+    description: 'Fail if certificate issues are detected'
+    required: false
+    default: 'false'
+  exclude-tech:
+    description: 'Fail if specified technologies are detected (comma-separated)'
+    required: false
+    default: ''
+  exclude-ignored:
+    description: 'Exclude ignored issues from gate evaluation'
+    required: false
+    default: 'false'
+  fail-on-headers:
+    description: 'Fail if HTTP security header issues are detected (CSP, HSTS, X-Frame-Options)'
+    required: false
+    default: 'false'
+  fail-on-cookies:
+    description: 'Fail if insecure cookie issues are detected (HttpOnly, Secure, SameSite)'
+    required: false
+    default: 'false'
+  fail-on-unsafe:
+    description: 'Fail if unsafe component issues are detected'
+    required: false
+    default: 'false'
+  fail-on-kev:
+    description: 'Fail if CISA Known Exploited Vulnerabilities are detected'
+    required: false
+    default: 'false'
+  fail-on-epss:
+    description: 'Fail if any issue has EPSS score >= this value (0.0-1.0)'
+    required: false
+    default: '0'
+  fail-on-active-exploits:
+    description: 'Fail if actively exploited vulnerabilities are detected'
+    required: false
+    default: 'false'
+  fail-on-ossf-score:
+    description: 'Fail if any technology has OpenSSF Scorecard score below this value (0-10)'
+    required: false
+    default: '0'
+  fail-on-cert-expiry:
+    description: 'Fail if certificate expires within N days'
+    required: false
+    default: '0'
+  fail-on-issue-count:
+    description: 'Fail if total issue count >= this value'
+    required: false
+    default: '0'
+  require-waf:
+    description: 'Fail if no WAF is detected'
+    required: false
+    default: 'false'
+  fail-on-sensitive-services:
+    description: 'Fail if sensitive services are exposed on the site IP'
+    required: false
+    default: 'false'
+  format:
+    description: 'Output format: json, human, sarif, html'
+    required: false
+    default: 'json'
+  no-create:
+    description: 'Do not auto-create site if URL not found'
+    required: false
+    default: 'false'
+  sarif-upload:
+    description: 'Upload SARIF results to GitHub Code Scanning (requires security-events: write permission)'
+    required: false
+    default: 'false'
+
+outputs:
+  exit-code:
+    description: 'Exit code (0=pass, 1=severity threshold exceeded, 2+=error)'
+    value: ${{ steps.analyze.outputs.exit-code }}
+  rating:
+    description: 'Security rating (A-F)'
+    value: ${{ steps.analyze.outputs.rating }}
+  issues:
+    description: 'Total number of issues found'
+    value: ${{ steps.analyze.outputs.issues }}
+  result-json:
+    description: 'Full analysis result in JSON'
+    value: ${{ steps.analyze.outputs.result-json }}
+  gate-results:
+    description: 'JSON with gate pass/fail results'
+    value: ${{ steps.analyze.outputs.gate-results }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Purplemet CLI
+      shell: bash
+      env:
+        PURPLEMET_CLI_VERSION: ${{ inputs.version }}
+        PURPLEMET_RELEASES_URL: ${{ github.api_url }}/repos/purplemet/cli/releases/latest
+      run: |
+        # Local mode: use pre-built binary (for local testing with act)
+        if [ "${PURPLEMET_CLI_VERSION}" = "local" ]; then
+          echo "::group::Using local purplemet-cli binary"
+          if [ -f ./purplemet-cli ]; then
+            cp ./purplemet-cli /usr/local/bin/purplemet-cli
+            chmod +x /usr/local/bin/purplemet-cli
+          elif command -v purplemet-cli > /dev/null 2>&1; then
+            echo "purplemet-cli already in PATH"
+          else
+            echo "::error title=Local binary not found::version=local requires purplemet-cli binary in repo root or in PATH"
+            exit 1
+          fi
+          purplemet-cli version
+          echo "::endgroup::"
+          exit 0
+        fi
+
+        echo "::group::Installing purplemet-cli"
+        source "${{ github.action_path }}/./shared/install.sh"
+        purplemet_install
+        echo "::endgroup::"
+
+    - name: Run Purplemet Analysis
+      id: analyze
+      shell: bash
+      env:
+        PURPLEMET_API_TOKEN: ${{ inputs.api-token }}
+        PURPLEMET_BASE_URL: ${{ inputs.base-url }}
+        PURPLEMET_TARGET_URL: ${{ inputs.target-url }}
+        PURPLEMET_FORMAT: ${{ inputs.format }}
+        PURPLEMET_NO_CREATE: ${{ inputs.no-create }}
+        PURPLEMET_FAIL_SEVERITY: ${{ inputs.fail-severity }}
+        PURPLEMET_WAIT_TIMEOUT: ${{ inputs.timeout }}
+        PURPLEMET_FAIL_RATING: ${{ inputs.fail-rating }}
+        PURPLEMET_FAIL_CVSS: ${{ inputs.fail-cvss }}
+        PURPLEMET_FAIL_ON_EOL: ${{ inputs.fail-on-eol }}
+        PURPLEMET_FAIL_ON_SSL: ${{ inputs.fail-on-ssl }}
+        PURPLEMET_FAIL_ON_CERT: ${{ inputs.fail-on-cert }}
+        PURPLEMET_EXCLUDE_TECH: ${{ inputs.exclude-tech }}
+        PURPLEMET_EXCLUDE_IGNORED: ${{ inputs.exclude-ignored }}
+        PURPLEMET_FAIL_ON_HEADERS: ${{ inputs.fail-on-headers }}
+        PURPLEMET_FAIL_ON_COOKIES: ${{ inputs.fail-on-cookies }}
+        PURPLEMET_FAIL_ON_UNSAFE: ${{ inputs.fail-on-unsafe }}
+        PURPLEMET_FAIL_ON_KEV: ${{ inputs.fail-on-kev }}
+        PURPLEMET_FAIL_ON_EPSS: ${{ inputs.fail-on-epss }}
+        PURPLEMET_FAIL_ON_ACTIVE_EXPLOITS: ${{ inputs.fail-on-active-exploits }}
+        PURPLEMET_FAIL_ON_OSSF_SCORE: ${{ inputs.fail-on-ossf-score }}
+        PURPLEMET_FAIL_ON_CERT_EXPIRY: ${{ inputs.fail-on-cert-expiry }}
+        PURPLEMET_FAIL_ON_ISSUE_COUNT: ${{ inputs.fail-on-issue-count }}
+        PURPLEMET_REQUIRE_WAF: ${{ inputs.require-waf }}
+        PURPLEMET_FAIL_ON_SENSITIVE_SERVICES: ${{ inputs.fail-on-sensitive-services }}
+      run: |
+        # Source shared analysis script for its functions
+        ANALYZE_SCRIPT="${{ github.action_path }}/./shared/analyze.sh"
+        if [ ! -f "${ANALYZE_SCRIPT}" ]; then
+          ANALYZE_SCRIPT="$(dirname "${{ github.action_path }}")/./shared/analyze.sh"
+        fi
+        source "${ANALYZE_SCRIPT}"
+
+        purplemet_validate || exit $?
+        ARGS=$(purplemet_build_args)
+        purplemet_run_analysis "${ARGS}"
+        purplemet_parse_results
+
+        # GitHub-specific: write outputs
+        echo "exit-code=${PURPLEMET_EXIT_CODE}" >> $GITHUB_OUTPUT
+        echo "rating=${PURPLEMET_RESULT_RATING}" >> $GITHUB_OUTPUT
+        echo "issues=${PURPLEMET_RESULT_ISSUES}" >> $GITHUB_OUTPUT
+
+        # Store full JSON result (multiline-safe delimiter)
+        if [ -f purplemet-report.json ]; then
+          EOF_DELIM=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "result-json<<${EOF_DELIM}" >> $GITHUB_OUTPUT
+          cat purplemet-report.json >> $GITHUB_OUTPUT
+          echo "${EOF_DELIM}" >> $GITHUB_OUTPUT
+
+          # Extract gate results
+          GATES=$(jq -c '.gates // {}' purplemet-report.json 2>/dev/null || echo '{}')
+          echo "gate-results=${GATES}" >> $GITHUB_OUTPUT
+        fi
+
+        purplemet_print_summary
+        exit ${PURPLEMET_EXIT_CODE}
+
+    - name: Generate SARIF report
+      if: always() && inputs.sarif-upload == 'true' && steps.analyze.outputs.exit-code != ''
+      shell: bash
+      env:
+        PURPLEMET_API_TOKEN: ${{ inputs.api-token }}
+        PURPLEMET_BASE_URL: ${{ inputs.base-url }}
+        PURPLEMET_TARGET_URL: ${{ inputs.target-url }}
+        PURPLEMET_FAIL_SEVERITY: ${{ inputs.fail-severity }}
+        PURPLEMET_WAIT_TIMEOUT: ${{ inputs.timeout }}
+        PURPLEMET_EXIT_CODE: ${{ steps.analyze.outputs.exit-code }}
+      run: |
+        # Re-run with SARIF output if analysis succeeded or found issues
+        if [ "${PURPLEMET_EXIT_CODE}" = "0" ] || [ "${PURPLEMET_EXIT_CODE}" = "1" ]; then
+          export PURPLEMET_FORMAT=sarif
+          source "${{ github.action_path }}/./shared/analyze.sh"
+          ARGS=$(purplemet_build_args)
+          purplemet-cli ${ARGS} > purplemet-results.sarif 2>/dev/null || true
+        fi
+
+    - name: Upload SARIF to GitHub Code Scanning
+      if: always() && inputs.sarif-upload == 'true' && steps.analyze.outputs.exit-code != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: purplemet-results.sarif
+        category: purplemet
+      continue-on-error: true
+
+    - name: Generate Job Summary
+      if: always() && steps.analyze.outputs.exit-code != ''
+      shell: bash
+      env:
+        PURPLEMET_EXIT_CODE: ${{ steps.analyze.outputs.exit-code }}
+        PURPLEMET_RESULT_RATING: ${{ steps.analyze.outputs.rating }}
+        PURPLEMET_RESULT_ISSUES: ${{ steps.analyze.outputs.issues }}
+        PURPLEMET_TARGET_URL: ${{ inputs.target-url }}
+        PURPLEMET_FAIL_SEVERITY: ${{ inputs.fail-severity }}
+      run: |
+        EXIT_CODE="${PURPLEMET_EXIT_CODE}"
+        RATING="${PURPLEMET_RESULT_RATING}"
+        ISSUES="${PURPLEMET_RESULT_ISSUES}"
+        TARGET="${PURPLEMET_TARGET_URL}"
+
+        # Status emoji and text
+        case "$EXIT_CODE" in
+          0) STATUS="✅ Passed" ;;
+          1) STATUS="⚠️ Threshold exceeded" ;;
+          2) STATUS="❌ Analysis error" ;;
+          3) STATUS="⏱️ Timeout" ;;
+          4) STATUS="🌐 Network/API error" ;;
+          *) STATUS="❌ Error (code ${EXIT_CODE})" ;;
+        esac
+
+        # Rating color
+        case "$RATING" in
+          A) RATING_DISPLAY="🟢 $RATING" ;;
+          B) RATING_DISPLAY="🟡 $RATING" ;;
+          C) RATING_DISPLAY="🟠 $RATING" ;;
+          D|E|F) RATING_DISPLAY="🔴 $RATING" ;;
+          *) RATING_DISPLAY="⚪ $RATING" ;;
+        esac
+
+        cat >> $GITHUB_STEP_SUMMARY << EOF
+        ## 🛡️ Purplemet Web ASM Analysis
+
+        | | |
+        |---|---|
+        | **Target** | \`${TARGET}\` |
+        | **Status** | ${STATUS} |
+        | **Rating** | ${RATING_DISPLAY} |
+        | **Issues** | ${ISSUES:-N/A} |
+        | **Threshold** | \`${PURPLEMET_FAIL_SEVERITY}\` |
+
+        EOF
+
+        # Add issue breakdown if available
+        if [ -f purplemet-report.json ]; then
+          CRITICAL=$(jq '[.analysis.issues[]? | select(.severity == "critical")] | length' purplemet-report.json 2>/dev/null || echo "0")
+          HIGH=$(jq '[.analysis.issues[]? | select(.severity == "high")] | length' purplemet-report.json 2>/dev/null || echo "0")
+          MEDIUM=$(jq '[.analysis.issues[]? | select(.severity == "medium")] | length' purplemet-report.json 2>/dev/null || echo "0")
+          LOW=$(jq '[.analysis.issues[]? | select(.severity == "low")] | length' purplemet-report.json 2>/dev/null || echo "0")
+          INFO=$(jq '[.analysis.issues[]? | select(.severity == "info")] | length' purplemet-report.json 2>/dev/null || echo "0")
+
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+
+        <details>
+        <summary>Issue breakdown</summary>
+
+        | Severity | Count |
+        |----------|-------|
+        | 🔴 Critical | ${CRITICAL} |
+        | 🟠 High | ${HIGH} |
+        | 🟡 Medium | ${MEDIUM} |
+        | 🔵 Low | ${LOW} |
+        | ⚪ Info | ${INFO} |
+
+        </details>
+        EOF
+        fi
