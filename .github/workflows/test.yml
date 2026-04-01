@@ -94,7 +94,8 @@ jobs:
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: Dockerfile
-          failure-threshold: warning
+          failure-threshold: error
+          ignore: DL3007,DL3018
 
   # Test the install step in isolation
   test-install:
