@@ -47,7 +47,7 @@ purplemet_detect_platform() {
     aarch64|arm64) PURPLEMET_ARCH=arm64 ;;
   esac
   PURPLEMET_EXT=""
-  [ "${PURPLEMET_OS}" = "windows" ] && PURPLEMET_EXT=".exe"
+  if [ "${PURPLEMET_OS}" = "windows" ]; then PURPLEMET_EXT=".exe"; fi
 }
 
 # ── Download and install binary ───────────────────────
@@ -60,11 +60,9 @@ purplemet_install() {
   # Resolve version
   version=$(purplemet_resolve_version "${version}") || return $?
   echo "Installing purplemet-cli ${version}..."
-  echo "DEBUG1: starting install, install_dir=${install_dir}" >&2
 
   # Detect platform
   purplemet_detect_platform
-  echo "DEBUG2: platform detected: os=${PURPLEMET_OS} arch=${PURPLEMET_ARCH} ext=${PURPLEMET_EXT}" >&2
 
   local filename="purplemet-cli-${PURPLEMET_OS}-${PURPLEMET_ARCH}${PURPLEMET_EXT}"
   local base_url="https://github.com/Purplemet/cli/releases/download/${version}"
