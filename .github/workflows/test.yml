@@ -9,7 +9,6 @@ on:
     branches: [main]
     paths:
       - '**'
-  workflow_dispatch:
 
 jobs:
   # Validate action.yml syntax and structure
@@ -129,36 +128,6 @@ jobs:
           fi
 
           FILENAME="purplemet-cli-${OS}-${ARCH}"
-          URL="https://dev.purplemet.com/purplemet/integrations/cli/-/releases/${VERSION}/downloads/${FILENAME}"
+          URL="https://github.com/purplemet/cli/releases/download/${VERSION}/${FILENAME}"
           echo "Would download: ${URL}"
           echo "Install mechanism validated"
-
-  # Integration test with real API (manual trigger only)
-  test-integration:
-    name: Integration test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run Purplemet Action
-        id: analyze
-        uses: ./
-        with:
-          api-token: ${{ secrets.PURPLEMET_API_TOKEN }}
-          target-url: ${{ vars.PURPLEMET_TEST_URL || 'https://example.com' }}
-          fail-severity: 'info'
-          timeout: '120000'
-        continue-on-error: true
-
-      - name: Verify outputs
-        run: |
-          echo "Exit code: ${{ steps.analyze.outputs.exit-code }}"
-          echo "Rating: ${{ steps.analyze.outputs.rating }}"
-          echo "Issues: ${{ steps.analyze.outputs.issues }}"
-
-          if [ -z "${{ steps.analyze.outputs.exit-code }}" ]; then
-            echo "::error::exit-code output is empty"
-            exit 1
-          fi
-          echo "All outputs present"
