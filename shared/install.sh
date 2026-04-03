@@ -47,7 +47,7 @@ purplemet_detect_platform() {
     aarch64|arm64) PURPLEMET_ARCH=arm64 ;;
   esac
   PURPLEMET_EXT=""
-  if [ "${PURPLEMET_OS}" = "windows" ]; then PURPLEMET_EXT=".exe"; fi
+  [ "${PURPLEMET_OS}" = "windows" ] && PURPLEMET_EXT=".exe"
 }
 
 # ── Download and install binary ───────────────────────
@@ -65,14 +65,12 @@ purplemet_install() {
   purplemet_detect_platform
 
   local filename="purplemet-cli-${PURPLEMET_OS}-${PURPLEMET_ARCH}${PURPLEMET_EXT}"
-  local base_url="https://github.com/Purplemet/cli/releases/download/${version}"
+  local base_url="https://github.com/purplemet/cli/releases/download/${version}"
   PURPLEMET_INSTALL_PATH="${install_dir}/purplemet-cli${PURPLEMET_EXT}"
 
   # Download binary
   local http_code
-  echo "DEBUG: platform=${PURPLEMET_OS}/${PURPLEMET_ARCH}, file=${filename}" >&2
-  echo "DEBUG: url=${base_url}/${filename}" >&2
-  http_code=$(curl -sSL -w "%{http_code}" "${base_url}/${filename}" -o "${PURPLEMET_INSTALL_PATH}" 2>&1 | tail -1 || echo "CURL_FAILED")
+  http_code=$(curl -sSL -w "%{http_code}" "${base_url}/${filename}" -o "${PURPLEMET_INSTALL_PATH}" 2>/dev/null)
   if [ "${http_code}" != "200" ]; then
     echo "ERROR: Failed to download ${base_url}/${filename} (HTTP ${http_code})" >&2
     rm -f "${PURPLEMET_INSTALL_PATH}"
