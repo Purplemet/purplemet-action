@@ -50,13 +50,15 @@ jobs:
           echo "Issues: ${{ steps.analysis.outputs.issues }}"
           echo "Exit code: ${{ steps.analysis.outputs.exit-code }}"
 
-          for output in rating issues exit-code; do
-            val="${{ steps.analysis.outputs[output] }}"
-            if [ -z "$val" ]; then
-              echo "::error::output '${output}' is empty"
-              exit 1
-            fi
-          done
+          if [ -z "${{ steps.analysis.outputs.rating }}" ]; then
+            echo "::error::output 'rating' is empty"; exit 1
+          fi
+          if [ -z "${{ steps.analysis.outputs.issues }}" ]; then
+            echo "::error::output 'issues' is empty"; exit 1
+          fi
+          if [ -z "${{ steps.analysis.outputs.exit-code }}" ]; then
+            echo "::error::output 'exit-code' is empty"; exit 1
+          fi
 
       - name: Verify JSON report file exists
         run: |
