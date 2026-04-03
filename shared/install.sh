@@ -65,7 +65,7 @@ purplemet_install() {
   purplemet_detect_platform
 
   local filename="purplemet-cli-${PURPLEMET_OS}-${PURPLEMET_ARCH}${PURPLEMET_EXT}"
-  local base_url="https://dev.purplemet.com/purplemet/integrations/cli/-/releases/${version}/downloads"
+  local base_url="https://github.com/Purplemet/cli/releases/download/${version}"
   PURPLEMET_INSTALL_PATH="${install_dir}/purplemet-cli${PURPLEMET_EXT}"
 
   # Download binary
