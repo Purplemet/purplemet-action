@@ -70,7 +70,9 @@ purplemet_install() {
 
   # Download binary
   local http_code
-  http_code=$(curl -sSL -w "%{http_code}" "${base_url}/${filename}" -o "${PURPLEMET_INSTALL_PATH}" 2>/dev/null)
+  echo "DEBUG: platform=${PURPLEMET_OS}/${PURPLEMET_ARCH}, file=${filename}" >&2
+  echo "DEBUG: url=${base_url}/${filename}" >&2
+  http_code=$(curl -sSL -w "%{http_code}" "${base_url}/${filename}" -o "${PURPLEMET_INSTALL_PATH}" 2>&1 | tail -1 || echo "CURL_FAILED")
   if [ "${http_code}" != "200" ]; then
     echo "ERROR: Failed to download ${base_url}/${filename} (HTTP ${http_code})" >&2
     rm -f "${PURPLEMET_INSTALL_PATH}"
