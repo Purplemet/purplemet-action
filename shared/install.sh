@@ -47,7 +47,9 @@ purplemet_detect_platform() {
     aarch64|arm64) PURPLEMET_ARCH=arm64 ;;
   esac
   PURPLEMET_EXT=""
-  [ "${PURPLEMET_OS}" = "windows" ] && PURPLEMET_EXT=".exe"
+  if [ "${PURPLEMET_OS}" = "windows" ]; then
+    PURPLEMET_EXT=".exe"
+  fi
 }
 
 # ── Download and install binary ───────────────────────
@@ -70,7 +72,7 @@ purplemet_install() {
 
   # Download binary
   local http_code
-  http_code=$(curl -sSL -w "%{http_code}" "${base_url}/${filename}" -o "${PURPLEMET_INSTALL_PATH}" 2>/dev/null)
+  http_code=$(curl -sSL -w "%{http_code}" "${base_url}/${filename}" -o "${PURPLEMET_INSTALL_PATH}")
   if [ "${http_code}" != "200" ]; then
     echo "ERROR: Failed to download ${base_url}/${filename} (HTTP ${http_code})" >&2
     rm -f "${PURPLEMET_INSTALL_PATH}"

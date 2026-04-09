@@ -94,17 +94,80 @@ All `PURPLEMET_*` variables from the [CONVENTIONS](https://dev.purplemet.com/pur
 
 ## Inputs
 
+### Core configuration
+
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `api-token` | **Yes** | — | Purplemet API token ([create one](https://cloud.purplemet.com/#/tokens/create)) |
 | `target-url` | **Yes** | — | URL of the web application to analyze |
-| `fail-severity` | No | `high` | Fail if issues at or above this severity: `critical`, `high`, `medium`, `low`, `info` |
+| `base-url` | No | — | API base URL override (e.g. `https://api.dev.purplemet.com`) |
+| `version` | No | `latest` | CLI version to use (e.g. `v1.2.0`, `latest`) |
 | `timeout` | No | `300000` | Wait timeout in milliseconds (0 = unlimited) |
-| `version` | No | `latest` | CLI version to use (e.g. `v1.2.0`) |
-| `base-url` | No | — | API base URL override |
+| `format` | No | `json` | Output format: `json`, `human`, `sarif`, `html` |
+| `no-create` | No | `false` | Do not auto-create site if URL not found |
 | `sarif-upload` | No | `false` | Upload SARIF results to GitHub Code Scanning |
 
-All [security gate environment variables](https://dev.purplemet.com/purplemet/integrations/cli/-/blob/main/docs/configuration.md) (`PURPLEMET_FAIL_ON_EOL`, `PURPLEMET_FAIL_ON_KEV`, `PURPLEMET_FAIL_CVSS`, etc.) are also supported when using the binary or Docker methods. See the [full parameter reference](https://dev.purplemet.com/purplemet/integrations/cli/-/blob/main/docs/integrations/github-actions.md#parameters).
+### Severity gates
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `fail-severity` | `high` | Fail if issues at or above this severity: `critical`, `high`, `medium`, `low`, `info` |
+| `fail-rating` | — | Fail if rating is at or below this grade (`A`-`F`) |
+| `fail-on-issue-count` | `0` | Fail if total issue count is greater than or equal to this value |
+| `exclude-ignored` | `false` | Exclude ignored issues from gate evaluation |
+
+### CVE / exploitability gates
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `fail-cvss` | `0` | Fail if any CVE has CVSS score >= this value (e.g. `9.0`) |
+| `fail-on-kev` | `false` | Fail if CISA Known Exploited Vulnerabilities are detected |
+| `fail-on-epss` | `0` | Fail if any issue has EPSS score >= this value (`0.0`-`1.0`) |
+| `fail-on-active-exploits` | `false` | Fail if actively exploited vulnerabilities are detected |
+
+### Component / technology gates
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `fail-on-eol` | `false` | Fail if end-of-life components are detected |
+| `fail-on-unsafe` | `false` | Fail if unsafe component issues are detected |
+| `fail-on-ossf-score` | `0` | Fail if any technology has OpenSSF Scorecard score below this value (`0`-`10`) |
+| `exclude-tech` | — | Fail if specified technologies are detected (comma-separated) |
+
+### SSL / certificate gates
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `fail-on-ssl` | `false` | Fail if SSL/TLS protocol issues are detected |
+| `fail-on-cert` | `false` | Fail if certificate issues are detected |
+| `fail-on-cert-expiry` | `0` | Fail if certificate expires within N days |
+
+### HTTP / web configuration gates
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `fail-on-headers` | `false` | Fail if HTTP security header issues are detected (CSP, HSTS, X-Frame-Options) |
+| `fail-on-cookies` | `false` | Fail if insecure cookie issues are detected (HttpOnly, Secure, SameSite) |
+| `require-waf` | `false` | Fail if no WAF is detected |
+| `fail-on-sensitive-services` | `false` | Fail if sensitive services are exposed on the site IP |
+
+### Comprehensive example
+
+```yaml
+- uses: purplemet/purplemet-action@v1
+  with:
+    api-token: ${{ secrets.PURPLEMET_API_TOKEN }}
+    target-url: 'https://your-app.example.com'
+    fail-severity: 'high'
+    fail-on-kev: 'true'
+    fail-cvss: '9.0'
+    fail-on-eol: 'true'
+    fail-on-cert-expiry: '30'
+    fail-on-headers: 'true'
+    sarif-upload: 'true'
+```
+
+> When using the binary or Docker methods, all of the above are also exposed as `PURPLEMET_*` environment variables (e.g. `PURPLEMET_FAIL_ON_KEV`, `PURPLEMET_FAIL_CVSS`).
 
 ## Outputs
 
