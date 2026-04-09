@@ -312,11 +312,11 @@ runs:
 
         # Add issue breakdown if available
         if [ -f purplemet-report.json ]; then
-          CRITICAL=$(jq '[.analysis.issues[]? | select(.severity == "critical")] | length' purplemet-report.json 2>/dev/null || echo "0")
-          HIGH=$(jq '[.analysis.issues[]? | select(.severity == "high")] | length' purplemet-report.json 2>/dev/null || echo "0")
-          MEDIUM=$(jq '[.analysis.issues[]? | select(.severity == "medium")] | length' purplemet-report.json 2>/dev/null || echo "0")
-          LOW=$(jq '[.analysis.issues[]? | select(.severity == "low")] | length' purplemet-report.json 2>/dev/null || echo "0")
-          INFO=$(jq '[.analysis.issues[]? | select(.severity == "info")] | length' purplemet-report.json 2>/dev/null || echo "0")
+          CRITICAL=$(jq -r '.analysis.issueCnts.CRITICAL // 0' purplemet-report.json 2>/dev/null || echo "0")
+          HIGH=$(jq -r '.analysis.issueCnts.HIGH // 0' purplemet-report.json 2>/dev/null || echo "0")
+          MEDIUM=$(jq -r '.analysis.issueCnts.MEDIUM // 0' purplemet-report.json 2>/dev/null || echo "0")
+          LOW=$(jq -r '.analysis.issueCnts.LOW // 0' purplemet-report.json 2>/dev/null || echo "0")
+          INFO=$(jq -r '.analysis.issueCnts.INFO // 0' purplemet-report.json 2>/dev/null || echo "0")
 
           cat >> $GITHUB_STEP_SUMMARY << EOF
 

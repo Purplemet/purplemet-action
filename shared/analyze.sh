@@ -164,8 +164,51 @@ purplemet_parse_results() {
   fi
 }
 
+# ── List configured gates ─────────────────────────────
+# Echoes one "name|threshold" line per gate enabled via env vars.
+purplemet_list_configured_gates() {
+  [ -n "${PURPLEMET_FAIL_SEVERITY}" ] \
+    && echo "severity|>= ${PURPLEMET_FAIL_SEVERITY}"
+  [ -n "${PURPLEMET_FAIL_RATING}" ] \
+    && echo "rating|worse than ${PURPLEMET_FAIL_RATING}"
+  [ "${PURPLEMET_FAIL_CVSS:-0}" != "0" ] \
+    && echo "cvss|>= ${PURPLEMET_FAIL_CVSS}"
+  [ "${PURPLEMET_FAIL_ON_EOL:-false}" = "true" ] \
+    && echo "eol|any end-of-life tech"
+  [ "${PURPLEMET_FAIL_ON_SSL:-false}" = "true" ] \
+    && echo "ssl|any SSL/TLS issue"
+  [ "${PURPLEMET_FAIL_ON_CERT:-false}" = "true" ] \
+    && echo "certificates|any cert issue"
+  [ "${PURPLEMET_FAIL_ON_HEADERS:-false}" = "true" ] \
+    && echo "headers|any security header issue"
+  [ "${PURPLEMET_FAIL_ON_COOKIES:-false}" = "true" ] \
+    && echo "cookies|any cookie issue"
+  [ "${PURPLEMET_FAIL_ON_UNSAFE:-false}" = "true" ] \
+    && echo "unsafe|any unsafe practice"
+  [ "${PURPLEMET_FAIL_ON_KEV:-false}" = "true" ] \
+    && echo "kev|any CISA KEV CVE"
+  [ "${PURPLEMET_FAIL_ON_EPSS:-0}" != "0" ] \
+    && echo "epss|>= ${PURPLEMET_FAIL_ON_EPSS}"
+  [ "${PURPLEMET_FAIL_ON_ACTIVE_EXPLOITS:-false}" = "true" ] \
+    && echo "active-exploits|any actively exploited CVE"
+  [ "${PURPLEMET_FAIL_ON_OSSF_SCORE:-0}" != "0" ] \
+    && echo "ossf-score|< ${PURPLEMET_FAIL_ON_OSSF_SCORE}"
+  [ "${PURPLEMET_FAIL_ON_CERT_EXPIRY:-0}" != "0" ] \
+    && echo "cert-expiry|< ${PURPLEMET_FAIL_ON_CERT_EXPIRY} days"
+  [ "${PURPLEMET_FAIL_ON_ISSUE_COUNT:-0}" != "0" ] \
+    && echo "issue-count|>= ${PURPLEMET_FAIL_ON_ISSUE_COUNT}"
+  [ "${PURPLEMET_REQUIRE_WAF:-false}" = "true" ] \
+    && echo "waf|require WAF"
+  [ "${PURPLEMET_FAIL_ON_SENSITIVE_SERVICES:-false}" = "true" ] \
+    && echo "sensitive-services|any sensitive service exposed"
+  [ -n "${PURPLEMET_EXCLUDE_TECH}" ] \
+    && echo "excluded-tech|${PURPLEMET_EXCLUDE_TECH}"
+}
+
 # ── Print human-readable summary ──────────────────────
 purplemet_print_summary() {
+  local output_dir="${PURPLEMET_OUTPUT_DIR:-.}"
+
   echo ""
   echo "══════════════════════════════════════════"
   echo "  PURPLEMET ANALYSIS RESULTS"
@@ -178,36 +221,58 @@ purplemet_print_summary() {
     echo "  Breakdown:  ${PURPLEMET_RESULT_BREAKDOWN}"
   fi
 
-  echo "──────────────────────────────────────────"
-  echo "  Gate:       fail on severity >= ${PURPLEMET_FAIL_SEVERITY:-high}"
+  # ── Gates section ──
+  local gates_list
+  gates_list=$(purplemet_list_configured_gates)
 
+  echo "──────────────────────────────────────────"
+  if [ -z "${gates_list}" ]; then
+    echo "  Gates:      none configured (report-only mode)"
+  else
+    echo "  Gates configured:"
+    # Pretty-print "name|threshold" with column alignment
+    local name threshold
+    while IFS='|' read -r name threshold; do
+      [ -z "${name}" ] && continue
+      printf "    - %-20s %s\n" "${name}" "${threshold}"
+    done <<< "${gates_list}"
+  fi
+
+  # ── Result section ──
+  echo "──────────────────────────────────────────"
   case "${PURPLEMET_EXIT_CODE}" in
-    0) echo "  Result:     PASSED" ;;
+    0)
+      echo "  Result:     PASSED — all gates satisfied"
+      ;;
     1)
-      echo "  Result:     FAILED — threshold exceeded"
+      echo "  Result:     FAILED — one or more gates failed"
       if [ -n "${PURPLEMET_RESULT_FAILED_GATES}" ]; then
         echo "  Failed:     ${PURPLEMET_RESULT_FAILED_GATES}"
       fi
-      # Show the CLI's gate detail from stderr
-      local output_dir="${PURPLEMET_OUTPUT_DIR:-.}"
+      # Show every gate-related line from the CLI's stderr (authoritative)
       if [ -s "${output_dir}/purplemet-stderr.log" ]; then
-        local gate_msg
-        gate_msg=$(grep -i "gate" "${output_dir}/purplemet-stderr.log" 2>/dev/null || true)
-        if [ -n "${gate_msg}" ]; then
-          echo "  Detail:     ${gate_msg}"
+        local gate_msgs
+        gate_msgs=$(grep -i "gate" "${output_dir}/purplemet-stderr.log" 2>/dev/null || true)
+        if [ -n "${gate_msgs}" ]; then
+          echo "  Reason(s):"
+          while IFS= read -r line; do
+            [ -z "${line}" ] && continue
+            echo "    • ${line}"
+          done <<< "${gate_msgs}"
         fi
       fi
       ;;
-    2) echo "  Result:     ERROR — analysis failed" ;;
-    3) echo "  Result:     ERROR — timeout" ;;
+    2) echo "  Result:     ERROR — analysis failed on Purplemet side" ;;
+    3) echo "  Result:     ERROR — analysis timed out" ;;
     4) echo "  Result:     ERROR — network/API error" ;;
+    5) echo "  Result:     ERROR — CLI usage error" ;;
+    6) echo "  Result:     ERROR — API contract error" ;;
     *) echo "  Result:     ERROR (code ${PURPLEMET_EXIT_CODE})" ;;
   esac
-
+  echo "  Exit code:  ${PURPLEMET_EXIT_CODE}"
   echo "══════════════════════════════════════════"
 
-  # Show non-gate warnings from stderr
-  local output_dir="${PURPLEMET_OUTPUT_DIR:-.}"
+  # ── Non-gate warnings from stderr ──
   if [ -s "${output_dir}/purplemet-stderr.log" ]; then
     local warnings
     warnings=$(grep -iv "gate" "${output_dir}/purplemet-stderr.log" 2>/dev/null || true)
