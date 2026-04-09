@@ -113,6 +113,14 @@ inputs:
     description: 'Upload SARIF results to GitHub Code Scanning (requires security-events: write permission)'
     required: false
     default: 'false'
+  basic-user:
+    description: 'HTTP Basic Auth username (only needed for the dev API behind nginx auth)'
+    required: false
+    default: ''
+  basic-pass:
+    description: 'HTTP Basic Auth password (only needed for the dev API behind nginx auth)'
+    required: false
+    default: ''
 
 outputs:
   exit-code:
@@ -191,6 +199,8 @@ runs:
         PURPLEMET_FAIL_ON_ISSUE_COUNT: ${{ inputs.fail-on-issue-count }}
         PURPLEMET_REQUIRE_WAF: ${{ inputs.require-waf }}
         PURPLEMET_FAIL_ON_SENSITIVE_SERVICES: ${{ inputs.fail-on-sensitive-services }}
+        PPM_CLOUD_UI_BASIC_USER: ${{ inputs.basic-user }}
+        PPM_CLOUD_UI_BASIC_PASS: ${{ inputs.basic-pass }}
       run: |
         # Source shared analysis script for its functions
         ANALYZE_SCRIPT="${{ github.action_path }}/./shared/analyze.sh"
@@ -234,6 +244,8 @@ runs:
         PURPLEMET_FAIL_SEVERITY: ${{ inputs.fail-severity }}
         PURPLEMET_WAIT_TIMEOUT: ${{ inputs.timeout }}
         PURPLEMET_EXIT_CODE: ${{ steps.analyze.outputs.exit-code }}
+        PPM_CLOUD_UI_BASIC_USER: ${{ inputs.basic-user }}
+        PPM_CLOUD_UI_BASIC_PASS: ${{ inputs.basic-pass }}
       run: |
         # Re-run with SARIF output if analysis succeeded or found issues
         if [ "${PURPLEMET_EXIT_CODE}" = "0" ] || [ "${PURPLEMET_EXIT_CODE}" = "1" ]; then
