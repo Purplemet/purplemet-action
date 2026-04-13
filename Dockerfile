@@ -1,4 +1,5 @@
-FROM ppmsupport/purplemet-cli:latest AS cli
+ARG PURPLEMET_CLI_VERSION=latest
+FROM ppmsupport/purplemet-cli:${PURPLEMET_CLI_VERSION} AS cli
 
 FROM alpine:3.19
 

@@ -81,11 +81,14 @@ purplemet_install() {
 
   # Verify checksum
   if [ "${verify_checksum}" = "true" ]; then
+    local checksum_file
+    checksum_file=$(mktemp "${TMPDIR:-/tmp}/purplemet-checksums.XXXXXX")
+    trap "rm -f '${checksum_file}'" RETURN
     local checksum_code
-    checksum_code=$(curl -sSL -w "%{http_code}" "${base_url}/checksums.txt" -o /tmp/purplemet-checksums.txt 2>/dev/null)
+    checksum_code=$(curl -sSL -w "%{http_code}" "${base_url}/checksums.txt" -o "${checksum_file}" 2>/dev/null)
     if [ "${checksum_code}" = "200" ]; then
       local expected actual
-      expected=$(grep "${filename}" /tmp/purplemet-checksums.txt | awk '{print $1}')
+      expected=$(grep "${filename}" "${checksum_file}" | awk '{print $1}')
       if [ -n "${expected}" ]; then
         # Use sha256sum or shasum depending on platform
         if command -v sha256sum > /dev/null 2>&1; then
@@ -105,7 +108,6 @@ purplemet_install() {
       else
         echo "WARNING: No checksum found for ${filename} in checksums.txt" >&2
       fi
-      rm -f /tmp/purplemet-checksums.txt
     else
       echo "WARNING: Could not download checksums.txt (HTTP ${checksum_code}), skipping verification" >&2
     fi

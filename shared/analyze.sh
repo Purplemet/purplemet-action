@@ -33,91 +33,88 @@ purplemet_validate() {
   fi
 }
 
-# ── Build CLI argument string ─────────────────────────
-# Reads PURPLEMET_* env vars, echoes the full argument string to stdout.
+# ── Build CLI argument array ─────────────────────────
+# Reads PURPLEMET_* env vars, populates the global PURPLEMET_ARGS array.
 purplemet_build_args() {
-  local args="analyze ${PURPLEMET_TARGET_URL}"
-  args="${args} --format ${PURPLEMET_FORMAT:-json}"
+  PURPLEMET_ARGS=("analyze" "${PURPLEMET_TARGET_URL}")
+  PURPLEMET_ARGS+=("--format" "${PURPLEMET_FORMAT:-json}")
 
   [ -n "${PURPLEMET_FAIL_SEVERITY}" ] \
-    && args="${args} --fail-on-severity ${PURPLEMET_FAIL_SEVERITY}"
+    && PURPLEMET_ARGS+=("--fail-on-severity" "${PURPLEMET_FAIL_SEVERITY}")
 
   [ "${PURPLEMET_WAIT_TIMEOUT:-300000}" != "0" ] \
-    && args="${args} --wait-timeout ${PURPLEMET_WAIT_TIMEOUT:-300000}"
+    && PURPLEMET_ARGS+=("--wait-timeout" "${PURPLEMET_WAIT_TIMEOUT:-300000}")
 
   [ -n "${PURPLEMET_FAIL_RATING}" ] \
-    && args="${args} --fail-on-rating ${PURPLEMET_FAIL_RATING}"
+    && PURPLEMET_ARGS+=("--fail-on-rating" "${PURPLEMET_FAIL_RATING}")
 
   [ "${PURPLEMET_FAIL_CVSS:-0}" != "0" ] \
-    && args="${args} --fail-on-cvss ${PURPLEMET_FAIL_CVSS}"
+    && PURPLEMET_ARGS+=("--fail-on-cvss" "${PURPLEMET_FAIL_CVSS}")
 
   [ "${PURPLEMET_FAIL_ON_EOL:-false}" = "true" ] \
-    && args="${args} --fail-on-eol"
+    && PURPLEMET_ARGS+=("--fail-on-eol")
 
   [ "${PURPLEMET_FAIL_ON_SSL:-false}" = "true" ] \
-    && args="${args} --fail-on-ssl"
+    && PURPLEMET_ARGS+=("--fail-on-ssl")
 
   [ "${PURPLEMET_FAIL_ON_CERT:-false}" = "true" ] \
-    && args="${args} --fail-on-cert"
+    && PURPLEMET_ARGS+=("--fail-on-cert")
 
   [ -n "${PURPLEMET_EXCLUDE_TECH}" ] \
-    && args="${args} --exclude-tech ${PURPLEMET_EXCLUDE_TECH}"
+    && PURPLEMET_ARGS+=("--exclude-tech" "${PURPLEMET_EXCLUDE_TECH}")
 
   [ "${PURPLEMET_EXCLUDE_IGNORED:-false}" = "true" ] \
-    && args="${args} --exclude-ignored"
+    && PURPLEMET_ARGS+=("--exclude-ignored")
 
   [ "${PURPLEMET_FAIL_ON_HEADERS:-false}" = "true" ] \
-    && args="${args} --fail-on-headers"
+    && PURPLEMET_ARGS+=("--fail-on-headers")
 
   [ "${PURPLEMET_FAIL_ON_COOKIES:-false}" = "true" ] \
-    && args="${args} --fail-on-cookies"
+    && PURPLEMET_ARGS+=("--fail-on-cookies")
 
   [ "${PURPLEMET_FAIL_ON_UNSAFE:-false}" = "true" ] \
-    && args="${args} --fail-on-unsafe"
+    && PURPLEMET_ARGS+=("--fail-on-unsafe")
 
   [ "${PURPLEMET_FAIL_ON_KEV:-false}" = "true" ] \
-    && args="${args} --fail-on-kev"
+    && PURPLEMET_ARGS+=("--fail-on-kev")
 
   [ "${PURPLEMET_FAIL_ON_EPSS:-0}" != "0" ] \
-    && args="${args} --fail-on-epss ${PURPLEMET_FAIL_ON_EPSS}"
+    && PURPLEMET_ARGS+=("--fail-on-epss" "${PURPLEMET_FAIL_ON_EPSS}")
 
   [ "${PURPLEMET_FAIL_ON_ACTIVE_EXPLOITS:-false}" = "true" ] \
-    && args="${args} --fail-on-active-exploits"
+    && PURPLEMET_ARGS+=("--fail-on-active-exploits")
 
   [ "${PURPLEMET_FAIL_ON_OSSF_SCORE:-0}" != "0" ] \
-    && args="${args} --fail-on-ossf-score ${PURPLEMET_FAIL_ON_OSSF_SCORE}"
+    && PURPLEMET_ARGS+=("--fail-on-ossf-score" "${PURPLEMET_FAIL_ON_OSSF_SCORE}")
 
   [ "${PURPLEMET_FAIL_ON_CERT_EXPIRY:-0}" != "0" ] \
-    && args="${args} --fail-on-cert-expiry ${PURPLEMET_FAIL_ON_CERT_EXPIRY}"
+    && PURPLEMET_ARGS+=("--fail-on-cert-expiry" "${PURPLEMET_FAIL_ON_CERT_EXPIRY}")
 
   [ "${PURPLEMET_FAIL_ON_ISSUE_COUNT:-0}" != "0" ] \
-    && args="${args} --fail-on-issue-count ${PURPLEMET_FAIL_ON_ISSUE_COUNT}"
+    && PURPLEMET_ARGS+=("--fail-on-issue-count" "${PURPLEMET_FAIL_ON_ISSUE_COUNT}")
 
   [ "${PURPLEMET_REQUIRE_WAF:-false}" = "true" ] \
-    && args="${args} --require-waf"
+    && PURPLEMET_ARGS+=("--require-waf")
 
   [ "${PURPLEMET_FAIL_ON_SENSITIVE_SERVICES:-false}" = "true" ] \
-    && args="${args} --fail-on-sensitive-services"
+    && PURPLEMET_ARGS+=("--fail-on-sensitive-services")
 
   [ "${PURPLEMET_NO_CREATE:-false}" = "true" ] \
-    && args="${args} --no-create"
-
-  echo "${args}"
+    && PURPLEMET_ARGS+=("--no-create")
 }
 
 # ── Run the analysis ──────────────────────────────────
 # Sets: PURPLEMET_EXIT_CODE
 purplemet_run_analysis() {
-  local args="${1}"
   local output_dir="${PURPLEMET_OUTPUT_DIR:-.}"
 
   [ -n "${PURPLEMET_BASE_URL}" ] && export PURPLEMET_BASE_URL
 
-  echo "Running: purplemet-cli ${args}"
+  echo "Running: purplemet-cli ${PURPLEMET_ARGS[*]}"
   echo "──────────────────────────────────────────"
 
   set +e
-  purplemet-cli ${args} 2>"${output_dir}/purplemet-stderr.log" \
+  purplemet-cli "${PURPLEMET_ARGS[@]}" 2> >(tee "${output_dir}/purplemet-stderr.log" >&2) \
     | tee "${output_dir}/purplemet-report.json"
   PURPLEMET_EXIT_CODE=${PIPESTATUS[0]}
   set -e
@@ -298,8 +295,8 @@ EOF
 # ── Main (when executed directly, not sourced) ────────
 if [ "${BASH_SOURCE[0]}" = "${0}" ] || [ -z "${BASH_SOURCE[0]}" ]; then
   purplemet_validate || exit $?
-  ARGS=$(purplemet_build_args)
-  purplemet_run_analysis "${ARGS}"
+  purplemet_build_args
+  purplemet_run_analysis
   purplemet_parse_results
   purplemet_print_summary
   purplemet_generate_dotenv
