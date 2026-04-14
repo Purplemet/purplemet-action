@@ -129,7 +129,7 @@ jobs:
           fi
 
           FILENAME="purplemet-cli-${OS}-${ARCH}"
-          URL="https://dev.purplemet.com/purplemet/integrations/cli/-/releases/${VERSION}/downloads/${FILENAME}"
+          URL="https://github.com/Purplemet/cli/releases/${VERSION}/download/${FILENAME}"
           echo "Would download: ${URL}"
           echo "Install mechanism validated"
 

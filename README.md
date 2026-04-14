@@ -203,6 +203,10 @@ The action automatically generates a visual summary in the **Actions** tab showi
 2. **Add the secret** to your repository: Settings → Secrets → Actions → `PURPLEMET_API_TOKEN`
 3. **Add the workflow** to your `.github/workflows/` directory
 
+## Documentation
+
+See the full [GitHub Actions integration guide](https://dev.purplemet.com/purplemet/integrations/cli/-/blob/main/docs/integrations/github-actions.md) for advanced examples, SARIF and Code Scanning setup, security gates, and detailed troubleshooting.
+
 ## License
 
 MIT
