@@ -101,6 +101,8 @@ purplemet_build_args() {
 
   [ "${PURPLEMET_NO_CREATE:-false}" = "true" ] \
     && PURPLEMET_ARGS+=("--no-create")
+
+  return 0
 }
 
 # ── Run the analysis ──────────────────────────────────

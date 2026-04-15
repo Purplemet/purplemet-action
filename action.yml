@@ -210,8 +210,8 @@ runs:
         source "${ANALYZE_SCRIPT}"
 
         purplemet_validate || exit $?
-        ARGS=$(purplemet_build_args)
-        purplemet_run_analysis "${ARGS}"
+        purplemet_build_args || true
+        purplemet_run_analysis
         purplemet_parse_results
 
         # GitHub-specific: write outputs
@@ -251,8 +251,8 @@ runs:
         if [ "${PURPLEMET_EXIT_CODE}" = "0" ] || [ "${PURPLEMET_EXIT_CODE}" = "1" ]; then
           export PURPLEMET_FORMAT=sarif
           source "${{ github.action_path }}/./shared/analyze.sh"
-          ARGS=$(purplemet_build_args)
-          purplemet-cli ${ARGS} > purplemet-results.sarif 2>/dev/null || true
+          purplemet_build_args || true
+          purplemet-cli "${PURPLEMET_ARGS[@]}" > purplemet-results.sarif 2>/dev/null || true
         fi
 
     - name: Upload SARIF to GitHub Code Scanning
