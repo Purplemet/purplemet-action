@@ -42,8 +42,8 @@ purplemet_build_args() {
   [ -n "${PURPLEMET_FAIL_SEVERITY}" ] \
     && PURPLEMET_ARGS+=("--fail-on-severity" "${PURPLEMET_FAIL_SEVERITY}")
 
-  [ "${PURPLEMET_WAIT_TIMEOUT:-300000}" != "0" ] \
-    && PURPLEMET_ARGS+=("--wait-timeout" "${PURPLEMET_WAIT_TIMEOUT:-300000}")
+  [ "${PURPLEMET_WAIT_TIMEOUT:-1800000}" != "0" ] \
+    && PURPLEMET_ARGS+=("--wait-timeout" "${PURPLEMET_WAIT_TIMEOUT:-1800000}")
 
   [ -n "${PURPLEMET_FAIL_RATING}" ] \
     && PURPLEMET_ARGS+=("--fail-on-rating" "${PURPLEMET_FAIL_RATING}")
@@ -219,6 +219,9 @@ purplemet_list_configured_gates() {
     && echo "sensitive-services|any sensitive service exposed"
   [ -n "${PURPLEMET_EXCLUDE_TECH}" ] \
     && echo "excluded-tech|${PURPLEMET_EXCLUDE_TECH}"
+  # Ensure a 0 exit status even when the last `&&` chain short-circuits;
+  # otherwise `set -e` aborts the caller (e.g. truncates the summary).
+  return 0
 }
 
 # ── Print human-readable summary ──────────────────────

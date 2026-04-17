@@ -102,7 +102,7 @@ All `PURPLEMET_*` variables from the [CONVENTIONS](https://dev.purplemet.com/pur
 | `target-url` | **Yes** | — | URL of the web application to analyze |
 | `base-url` | No | — | API base URL override (e.g. `https://api.dev.purplemet.com`) |
 | `version` | No | `latest` | CLI version to use (e.g. `v1.2.0`, `latest`) |
-| `timeout` | No | `300000` | Wait timeout in milliseconds (0 = unlimited) |
+| `timeout` | No | `1800000` | Wait timeout in milliseconds (30 min, 0 = unlimited) |
 | `format` | No | `json` | Output format: `json`, `human`, `sarif`, `html` |
 | `no-create` | No | `false` | Do not auto-create site if URL not found |
 | `sarif-upload` | No | `false` | Upload SARIF results to GitHub Code Scanning |
