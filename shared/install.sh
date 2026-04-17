@@ -68,6 +68,22 @@ purplemet_install() {
 
   local filename="purplemet-cli-${PURPLEMET_OS}-${PURPLEMET_ARCH}${PURPLEMET_EXT}"
   local base_url="https://github.com/purplemet/cli/releases/download/${version}"
+
+  # If install_dir is not writable, fall back to user-local (XDG spec).
+  # Keeps CI runners without sudo working without env overrides.
+  if [ ! -w "${install_dir}" ] && [ -z "${PURPLEMET_INSTALL_DIR:-}" ]; then
+    local fallback="${HOME}/.local/bin"
+    echo "WARNING: ${install_dir} not writable; falling back to ${fallback}" >&2
+    mkdir -p "${fallback}"
+    install_dir="${fallback}"
+    # Prepend to PATH so subsequent calls in the same shell find the binary.
+    # For multi-step Jenkins pipelines, also set PATH at pipeline level
+    # (environment { PATH = "${env.HOME}/.local/bin:${env.PATH}" }).
+    case ":${PATH}:" in
+      *":${fallback}:"*) ;;
+      *) export PATH="${fallback}:${PATH}" ;;
+    esac
+  fi
   PURPLEMET_INSTALL_PATH="${install_dir}/purplemet-cli${PURPLEMET_EXT}"
 
   # Download binary

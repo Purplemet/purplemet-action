@@ -105,10 +105,25 @@ purplemet_build_args() {
   return 0
 }
 
+# ── File extension for the configured format ──────────
+# Echoes the extension (no leading dot) to use for the report file.
+purplemet_report_ext() {
+  case "${PURPLEMET_FORMAT:-json}" in
+    json)  echo "json" ;;
+    sarif) echo "sarif" ;;
+    html)  echo "html" ;;
+    human) echo "txt" ;;
+    *)     echo "json" ;;
+  esac
+}
+
 # ── Run the analysis ──────────────────────────────────
-# Sets: PURPLEMET_EXIT_CODE
+# Sets: PURPLEMET_EXIT_CODE, PURPLEMET_REPORT_FILE
 purplemet_run_analysis() {
   local output_dir="${PURPLEMET_OUTPUT_DIR:-.}"
+  local ext
+  ext=$(purplemet_report_ext)
+  PURPLEMET_REPORT_FILE="${output_dir}/purplemet-report.${ext}"
 
   [ -n "${PURPLEMET_BASE_URL}" ] && export PURPLEMET_BASE_URL
 
@@ -117,7 +132,7 @@ purplemet_run_analysis() {
 
   set +e
   purplemet-cli "${PURPLEMET_ARGS[@]}" 2> >(tee "${output_dir}/purplemet-stderr.log" >&2) \
-    | tee "${output_dir}/purplemet-report.json"
+    | tee "${PURPLEMET_REPORT_FILE}"
   PURPLEMET_EXIT_CODE=${PIPESTATUS[0]}
   set -e
 }
@@ -132,7 +147,9 @@ purplemet_parse_results() {
   PURPLEMET_RESULT_BREAKDOWN=""
   PURPLEMET_RESULT_FAILED_GATES=""
 
-  if command -v jq > /dev/null 2>&1 \
+  # Only parse when the report is JSON (other formats aren't jq-readable).
+  if [ "${PURPLEMET_FORMAT:-json}" = "json" ] \
+     && command -v jq > /dev/null 2>&1 \
      && [ -f "${output_dir}/purplemet-report.json" ]; then
     PURPLEMET_RESULT_RATING=$(jq -r '.analysis.rating // "N/A"' \
       "${output_dir}/purplemet-report.json" 2>/dev/null || echo "N/A")
