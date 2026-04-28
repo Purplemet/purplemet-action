@@ -63,9 +63,6 @@ purplemet_build_args() {
   [ -n "${PURPLEMET_EXCLUDE_TECH}" ] \
     && PURPLEMET_ARGS+=("--exclude-tech" "${PURPLEMET_EXCLUDE_TECH}")
 
-  [ "${PURPLEMET_EXCLUDE_IGNORED:-false}" = "true" ] \
-    && PURPLEMET_ARGS+=("--exclude-ignored")
-
   [ "${PURPLEMET_FAIL_ON_HEADERS:-false}" = "true" ] \
     && PURPLEMET_ARGS+=("--fail-on-headers")
 

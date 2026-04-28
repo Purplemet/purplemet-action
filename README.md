@@ -114,7 +114,6 @@ All `PURPLEMET_*` variables from the [CONVENTIONS](https://dev.purplemet.com/pur
 | `fail-severity` | `high` | Fail if issues at or above this severity: `critical`, `high`, `medium`, `low`, `info` |
 | `fail-rating` | — | Fail if rating is at or below this grade (`A`-`F`) |
 | `fail-on-issue-count` | `0` | Fail if total issue count is greater than or equal to this value |
-| `exclude-ignored` | `false` | Exclude ignored issues from gate evaluation |
 
 ### CVE / exploitability gates
 

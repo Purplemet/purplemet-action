@@ -53,10 +53,6 @@ inputs:
     description: 'Fail if specified technologies are detected (comma-separated)'
     required: false
     default: ''
-  exclude-ignored:
-    description: 'Exclude ignored issues from gate evaluation'
-    required: false
-    default: 'false'
   fail-on-headers:
     description: 'Fail if HTTP security header issues are detected (CSP, HSTS, X-Frame-Options)'
     required: false
@@ -187,7 +183,6 @@ runs:
         PURPLEMET_FAIL_ON_SSL: ${{ inputs.fail-on-ssl }}
         PURPLEMET_FAIL_ON_CERT: ${{ inputs.fail-on-cert }}
         PURPLEMET_EXCLUDE_TECH: ${{ inputs.exclude-tech }}
-        PURPLEMET_EXCLUDE_IGNORED: ${{ inputs.exclude-ignored }}
         PURPLEMET_FAIL_ON_HEADERS: ${{ inputs.fail-on-headers }}
         PURPLEMET_FAIL_ON_COOKIES: ${{ inputs.fail-on-cookies }}
         PURPLEMET_FAIL_ON_UNSAFE: ${{ inputs.fail-on-unsafe }}
