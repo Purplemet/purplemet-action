@@ -95,7 +95,8 @@ purplemet_verify_checksum() {
   fi
 
   local expected actual
-  expected=$(grep " ${filename}\$\\| ${filename}$" "${checksum_file}" | awk '{print $1}' | head -1)
+  # Exact filename match (v1.1.20+ adds .tar.gz assets sharing the binary's prefix)
+  expected=$(awk -v f="${filename}" '$2 == f {print $1; exit}' "${checksum_file}")
   if [ -z "${expected}" ]; then
     echo "WARNING: No checksum found for ${filename} in checksums.txt" >&2
     return 0
