@@ -1,0 +1,75 @@
+name: Test Purplemet Action
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  # Validate action.yml syntax and structure
+  validate:
+    name: Validate action.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check action.yml exists and is valid YAML
+        run: |
+          if [ ! -f action.yml ]; then
+            echo "::error::action.yml not found"
+            exit 1
+          fi
+          # Basic YAML validation
+          python3 -c "
+          import yaml, sys
+          with open('action.yml') as f:
+              data = yaml.safe_load(f)
+          required = ['name', 'description', 'inputs', 'outputs', 'runs']
+          for key in required:
+              if key not in data:
+                  print(f'::error::Missing required key: {key}')
+                  sys.exit(1)
+          print('action.yml structure is valid')
+          "
+
+      - name: Verify required inputs
+        run: |
+          python3 -c "
+          import yaml
+          with open('action.yml') as f:
+              data = yaml.safe_load(f)
+          inputs = data.get('inputs', {})
+          # Check required inputs exist
+          for name in ['api-token', 'target-url']:
+              if name not in inputs:
+                  print(f'::error::Missing required input: {name}')
+                  exit(1)
+              if not inputs[name].get('required'):
+                  print(f'::error::Input {name} should be required')
+                  exit(1)
+          # Check optional inputs have defaults
+          for name in ['fail-severity', 'timeout', 'version']:
+              if name in inputs and 'default' not in inputs[name]:
+                  print(f'::warning::Optional input {name} has no default')
+          print('All required inputs validated')
+          "
+
+      - name: Verify outputs
+        run: |
+          python3 -c "
+          import yaml
+          with open('action.yml') as f:
+              data = yaml.safe_load(f)
+          outputs = data.get('outputs', {})
+          for name in ['exit-code', 'rating', 'issues', 'result-json']:
+              if name not in outputs:
+                  print(f'::error::Missing required output: {name}')
+                  exit(1)
+          print('All required outputs validated')
+          "
